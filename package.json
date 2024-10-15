@@ -1,0 +1,29 @@
+{
+  "name": "fitness_world",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shalini1223/fitness_world.git"
+  },
+  "author": "shalini",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/shalini1223/fitness_world/issues"
+  },
+  "homepage": "https://github.com/shalini1223/fitness_world#readme",
+  "dependencies": {
+    "compression": "^1.7.4",
+    "cors": "^2.8.5",
+    "express": "^4.21.1",
+    "express-rate-limit": "^7.4.1",
+    "helmet": "^8.0.0",
+    "mongoose": "^8.7.1",
+    "morgan": "^1.10.0",
+    "pino": "^9.5.0"
+  }
+}
