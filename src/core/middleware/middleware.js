@@ -41,6 +41,10 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import path from 'path';
 
+import {globalExceptionhandler} from '../exceptions/global.exception.handler.js';
+import {routes} from '../../routes/routes.js';
+import {NotFoundException} from '../exceptions/commom.exception.js';
+
 /**
  * wraps express application in middelware to sert up cors
  */
@@ -86,11 +90,16 @@ export const middelware = (app)=>{
      * i18nect is internalization-framework written in js
      */
 
+app.use('/api/v1', routes);
+
+/**
+ * handle 404 error
+ */
     app.use((req,res,next) =>{
-        throw new error;
+        throw new NotFoundException();
     });
     /**
      * Global exception handler
      */
-    // app.use(globalExceptionhandler);
+    app.use(globalExceptionhandler);
 }
