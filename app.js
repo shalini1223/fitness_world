@@ -3,7 +3,7 @@ import 'dotenv/config';
 
 import {logger} from './src/core/util/logger/logger.js';
 import { initializeSecrets } from './src/core/util/aws/secretmanager';
-import connectDB from './src/core/db/db.js';
+import connectDB from './src/db/db.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -24,5 +24,5 @@ app.get('/check', function(req, res) {
 app.use('/public', express.static('public'));
 
 app.listen(PORT, () =>{
-    
+    logger.info('sucess');
 });
