@@ -56,34 +56,34 @@ export const register = async (req, res, next) => {
   }
 };
 
-export const login = async (req,res, next) =>{
-    try{
-        const {email, password, fcmToken, timeZone} = req.body;
+export const login = async (req, res, next) => {
+  try {
+    const { email, password, fcmToken, timeZone } = req.body;
 
-        const user = await dbService.findOne(User, {email, isDeleted:false});
-        if(!user){
-            throw new UserNotFoundException();
-        }
+    const user = await dbService.findOne(User, { email, isDeleted: false });
+    if (!user) {
+      throw new UserNotFoundException();
+    }
 
-        const isPasswordValid = await verifyPassword(password, user.password);
-        if(!isPasswordValid){
-            throw new InvalidPasswordException();
-        }
+    const isPasswordValid = await verifyPassword(password, user.password);
+    if (!isPasswordValid) {
+      throw new InvalidPasswordException();
+    }
 
-        if(fcmToken)await dbService.updateMany(User, { fcmToken }, { fcmToken: null });
+    if (fcmToken)
+      await dbService.updateMany(User, { fcmToken }, { fcmToken: null });
 
-        const token = generateToken({userId:user._id});
-        await dbService.findByIdAndUpdate(User, user._id,{
-            ...(fcmToken && {fcmToken}),
-            ...(timeZone && {timeZone})
-        });
+    const token = generateToken({ userId: user._id });
+    await dbService.findByIdAndUpdate(User, user._id, {
+      ...(fcmToken && { fcmToken }),
+      ...(timeZone && { timeZone }),
+    });
 
-        createResponse(req,res.responseCodes.LOGIN_SUCCESSFUL,{
-            token,
-            profile: getUserProfile(user)
-        });
-
-    } catch (error) {
+    createResponse(req, res.responseCodes.LOGIN_SUCCESSFUL, {
+      token,
+      profile: getUserProfile(user),
+    });
+  } catch (error) {
     next(error);
   }
 };
@@ -96,41 +96,93 @@ export const login = async (req,res, next) =>{
  * @throws {UserNotFoundException} if the user is not found
  */
 
-export const adminLogin = async (req,res,next) =>{
-    try{
-        let {email, password} = req.body;
+export const adminLogin = async (req, res, next) => {
+  try {
+    let { email, password } = req.body;
 
-        //find user in db using provided email
-        let user = await dbService.findOne(User,{email,isDeleted:false});
-        if(!user){
-            throw new UserNotFoundException();
-        }
+    //find user in db using provided email
+    let user = await dbService.findOne(User, { email, isDeleted: false });
+    if (!user) {
+      throw new UserNotFoundException();
+    }
 
-        //verify password with stored password
-        const isPasswordValid = await verifyPassword(password,user.password);
-        if(!isPasswordValid){
-            throw new InvalidPasswordException();
-        }
+    //verify password with stored password
+    const isPasswordValid = await verifyPassword(password, user.password);
+    if (!isPasswordValid) {
+      throw new InvalidPasswordException();
+    }
 
-        //generate token and add it to user object
-        let token = generateToken({userId: user._id});
+    //generate token and add it to user object
+    let token = generateToken({ userId: user._id });
 
-        //send response with user object and success
-        createResponse(req,res,responseCodes.LOGIN_SUCCESSFUL,{
-            token,
-            profile: getUserProfile(user)
-        });
-
-    }catch (error) {
+    //send response with user object and success
+    createResponse(req, res, responseCodes.LOGIN_SUCCESSFUL, {
+      token,
+      profile: getUserProfile(user),
+    });
+  } catch (error) {
     next(error);
   }
 };
 
-export const forgotPassword = async (req,res,next)=>{
-    try{
-        const {email} = req.body;
+export const forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
 
-    }catch (error) {
+    const user = await User.findOne({ email, isDeleted: false });
+    if (!user) {
+      throw new UserNotFoundException();
+    }
+    const otp = generateOTP();
+    sendEmail(
+      user.email,
+      req.t("email.verifyEmail.subject"),
+      ".",
+      sendOtpTemplate(req, `${otp}`.split("").join(" "))
+    );
+
+    //save otp to database
+    await dbService.findByIdAndUpdate(User, user._id, {
+      passwordRestCode: otp,
+      passwordResetExpiry: new Date(new Date().getTime() + 5 * 60000),
+      passwordResetCodeSentAt: new Date(),
+    });
+
+    createResponse(req, res, responseCodes.OTP_SENT, {
+      email: user.email,
+      otp,
+    });
+  } catch (error) {
     next(error);
   }
-}
+};
+
+export const resetPassword = async (req, res, next) => {
+  try {
+    const { email, otp } = req.body;
+
+    const user = await User.findOne({ email, isDeleted: false });
+    if (!user) {
+      throw new UserNotFoundException();
+    }
+    if (user.role !== "admin" && user.passwordResetCode !== otp) {
+      throw new InvalidOTPException();
+    }
+    const password = generatePassword();
+    sendEmail(
+      user.email,
+      req.t("email.resetPassword.subject"),
+      ".",
+      sendNewPasswordTemplate(req, password)
+    );
+
+    await User.findByIdAndUpdate(user._id, {
+      password: await hashPassword(password),
+      passwordRestCode: null,
+      passwordResetExpiry: null,
+      passwordResetCodeSentAt: null,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
